@@ -8,13 +8,15 @@ namespace AudioRecorder
 {
     public partial class Form1 : Form
     {
-        private string? outPutFileNameSpeaker;
-        private string? outPutFileNameMic;
-        private string? outPutFileName;
+        private string? outPutFileNameSpeaker = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\Recorded Audio\\speaker_{Guid.NewGuid()}.wav";
+        private string? outPutFileNameMic = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\Recorded Audio\\mic_{Guid.NewGuid()}.wav";
+        private string? outPutFileName = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\Recorded Audio\\final_{Guid.NewGuid()}.wav";
+
         private WasapiLoopbackCapture? loopbackCapture;
         private WasapiCapture? microphoneCapture;
         private WaveFileWriter? writer_Speaker;
         private WaveFileWriter? writer_Mic;
+
 
         public Form1()
         {
@@ -36,6 +38,11 @@ namespace AudioRecorder
 
             output_devices.SelectedIndex = 0;
             input_devices.SelectedIndex = 0;
+
+            //the below code selects the depault playback and loopback devices whose main purpose it for communication
+            //is commented for now as not in use
+            //var ouptputDevice = outputEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Communications);
+            //var onputDevice = outputEnumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -47,21 +54,9 @@ namespace AudioRecorder
         {
             try
             {
-                outPutFileNameSpeaker = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\speaker_{Guid.NewGuid()}.wav";
-                outPutFileNameMic = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\mic_{Guid.NewGuid()}.wav";
-                outPutFileName = $"C:\\Users\\rugyawali\\Desktop\\AudioRecorder\\final_{Guid.NewGuid()}.wav";
 
-
-                //outPutFileNameSpeaker = Path.GetTempFileName();
-                //outPutFileNameMic = Path.GetTempFileName();
-
-                //FileInfo fileInfo1 = new FileInfo(outPutFileNameSpeaker);
-                //fileInfo1.Attributes = FileAttributes.Temporary;
-
-                //FileInfo fileInfo2 = new FileInfo(outPutFileNameMic);
-                //fileInfo2.Attributes = FileAttributes.Temporary;
-
-
+                btn_start.Enabled = false;
+                btn_stop.Enabled = true;
 
                 var outputDevice = (MMDevice)output_devices.SelectedItem;
                 var inputDevice = (MMDevice)input_devices.SelectedItem;
@@ -95,19 +90,6 @@ namespace AudioRecorder
                     btn_start.Enabled = true;
                     btn_stop.Enabled = false;
 
-                    var startInfoSpeaker = new ProcessStartInfo
-                    {
-                        FileName = Path.GetDirectoryName(outPutFileNameSpeaker),
-                        UseShellExecute = true
-                    };
-                    var startInfoMic = new ProcessStartInfo
-                    {
-                        FileName = Path.GetDirectoryName(outPutFileNameMic),
-                        UseShellExecute = true
-                    };
-                    Process.Start(startInfoSpeaker);
-                    Process.Start(startInfoMic);
-
                     using (var reader1 = new AudioFileReader(outPutFileNameSpeaker))
                     using (var reader2 = new AudioFileReader(outPutFileNameMic))
                     {
@@ -116,13 +98,17 @@ namespace AudioRecorder
                         var mixer = new MixingSampleProvider(new[] { reader1, reader2 });
                         WaveFileWriter.CreateWaveFile16(outPutFileName, mixer);
                     }
+
+                    //if(!string.IsNullOrEmpty(outPutFileNameSpeaker) || !string.IsNullOrEmpty(outPutFileNameMic))
+                    //{
+                    // have supressed the warning of possible null refrence
+                        File.Delete(outPutFileNameSpeaker!);
+                        File.Delete(outPutFileNameMic!);
+                    //}
                 };
 
                 loopbackCapture.StartRecording();
                 microphoneCapture.StartRecording();
-
-                btn_start.Enabled = false;
-                btn_stop.Enabled = true;
             }
             catch (Exception ex)
             {
@@ -132,55 +118,21 @@ namespace AudioRecorder
 
         private void btn_stop_Click(object sender, EventArgs e)
         {
-            if (loopbackCapture != null)
+            try
             {
-                loopbackCapture.StopRecording();
+                if (loopbackCapture != null)
+                {
+                    loopbackCapture.StopRecording();
+                }
+                if (microphoneCapture != null)
+                {
+                    microphoneCapture.StopRecording();
+                }
             }
-            if (microphoneCapture != null)
+            catch (Exception ex)
             {
-                microphoneCapture.StopRecording();
+                throw ex;
             }
         }
-
-
-
-
-
-
-        //private void btn_stop_Click(object sender, EventArgs e)
-        //{
-        //    try
-        //    {
-        //        if (loopbackCapture != null)
-        //        {
-        //            loopbackCapture.StopRecording();
-        //            loopbackCapture.Dispose(); // Dispose of the recording instance
-        //        }
-
-        //        if (microphoneCapture != null)
-        //        {
-        //            microphoneCapture.StopRecording();
-        //            microphoneCapture.Dispose(); // Dispose of the recording instance
-        //        }
-
-        //        // Allow some time for the processes to release the files
-        //        Thread.Sleep(1000);
-
-        //        // Delete files after stopping and disposing of recording instances
-        //        File.Delete(outPutFileNameSpeaker);
-        //        File.Delete(outPutFileNameMic);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw ex;
-        //        // Handle exceptions or log errors if needed
-        //    }
-        //    finally
-        //    {
-        //        btn_start.Enabled = true;
-        //        btn_stop.Enabled = false;
-        //    }
-        //}
-
     }
 }
